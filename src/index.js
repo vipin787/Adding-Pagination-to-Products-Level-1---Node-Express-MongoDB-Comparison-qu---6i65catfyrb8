@@ -1,36 +1,39 @@
-const app = require('./app');
-const dotenv = require('dotenv');
+const express = require('express');
+const app = express();
 const mongoose = require('mongoose');
-const fs = require("fs");
+const { off } = require('../models/product.js');
 const products   =require("../models/product.js");
-const products_data = JSON.parse(fs.readFileSync(`${__dirname}/../data/products.json`));
 
-dotenv.config();
+// Import routes
 
-//connect to DB
-const url = process.env.DATABASE_URL || "mongodb://localhost:27017/products";
-mongoose.connect(url,{ useNewUrlParser: true, useUnifiedTopology: true }, () => {
-    console.log('connected to DB')
-})
+//Router Middlewares
+app.use(express.json());
 
-//insert Products data to Mongodb
 
-for(var i=0;i<products_data.length;i++){
+//default value for limit is 5 and offset is 0
+//This route should return an array of _id of all the element that need to be rturned.
+//output id can be in any order.
 
-        var name, price, description, category;
-        name = products_data[i]["name"];
-        price = products_data[i]["price"];
-        description = products_data[i]["description"];
-        category = products_data[i]["category"];
+app.get("/",async function(req,res){
 
-        var newproduct = {
-            "name":name,
-            "description":description,
-            "price": price,
-            "category": category
-        };
+    var limit=req.query.limit,offset=req.query.offset;
 
-        products.create(newproduct);
-}
+    if(limit == null) limit = 5;
+    else limit = parseInt(limit);
+    if(offset == null) offset=0;
+    else offset = parseInt(offset);
 
-app.listen(3000, () => console.log('Server running......'));
+    if(limit > 5) limit = 5;
+
+    result = await products.find({});
+
+    var ids = [];
+    const startt = (limit*offset);
+
+    for(var i = startt; i < result.length && i < (startt+limit) ; i++) ids.push(result[i]["_id"]);
+
+    res.send(ids);
+
+});
+
+module.exports = app;
